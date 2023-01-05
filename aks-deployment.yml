@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kapacitor-kafka-connect
+  namespace: #{AKS-KC-NAMESPACE}#
+  annotations:
+    kubernetes.io/change-cause: "Release: #{ACR-REPO}#/#{Build.Repository.Name}#:#{Release.ReleaseName}#"
+  labels:
+    app: kapacitor-kafka-connect
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: kapacitor-kafka-connect
+  template:
+    metadata:
+      annotations:
+        kubernetes.io/change-cause: "Release: #{Release.ReleaseName}#"     
+      labels:
+        app: kapacitor-kafka-connect
+    spec:
+      containers:
+      - name: kapacitor-kafka-connect
+        image: #{ACR-REPO}#/#{Build.Repository.Name}#:latest
+        volumeMounts:
+          - name: cfg-properties
+            mountPath: "/properties"
+            readOnly: true
+        ports:
+        - containerPort: 8083
+        envFrom:
+        - secretRef:
+            name: kapacitor-kafka-connect   
+        env:
+        - name: CONNECT_REST_ADVERTISED_HOST_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+      imagePullSecrets:
+      - name: kapacitoracr
+      volumes:
+        - name: cfg-properties
+          configMap:
+            name: cfg-kapacitor-kafka-connect
